@@ -6,7 +6,12 @@
     "node": ">=6.5",
     "npm": ">=3.10"
   },
-  "browserslist": [">1%", "last 4 versions", "Firefox ESR", "not ie < 9"],
+  "browserslist": [
+    ">1%",
+    "last 4 versions",
+    "Firefox ESR",
+    "not ie < 9"
+  ],
   "dependencies": {
     "@babel/polyfill": "7.0.0-beta.39",
     "core-js": "^2.5.3",
@@ -24,6 +29,7 @@
     "@babel/preset-flow": "7.0.0-beta.39",
     "@babel/preset-react": "7.0.0-beta.39",
     "@babel/preset-stage-2": "7.0.0-beta.39",
+    "assets-webpack-plugin": "^3.5.1",
     "babel-core": "^7.0.0-0",
     "babel-eslint": "^8.1.2",
     "babel-jest": "^22.0.4",
