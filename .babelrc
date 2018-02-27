@@ -1,0 +1,20 @@
+{
+  "plugins": ["universal-import"],
+  "env": {
+    "production": {
+      "plugins": [
+        [
+          "transform-react-remove-prop-types",
+          { "removeImport": true }
+        ]
+      ]
+    },
+    "test": {
+      "presets": [
+        "env",
+        "stage-0",
+        "react"
+      ]
+    }
+  }
+}
