@@ -11,14 +11,10 @@ import path from 'path';
 import webpack from 'webpack';
 import AssetsPlugin from 'assets-webpack-plugin';
 import nodeExternals from 'webpack-node-externals';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
-import overrideRules from './lib/overrideRules';
 import pkg from '../package.json';
 
 const isDebug = !process.argv.includes('--release');
 const isVerbose = process.argv.includes('--verbose');
-const isAnalyze =
-  process.argv.includes('--analyze') || process.argv.includes('--analyse');
 
 const reScript = /\.(js|jsx|mjs)$/;
 
@@ -151,43 +147,6 @@ const clientConfig = {
       prettyPrint: true,
     }),
 
-    // Move modules that occur in multiple entry chunks to a new entry chunk (the commons chunk).
-    // https://webpack.js.org/plugins/commons-chunk-plugin/
-    new webpack.optimize.CommonsChunkPlugin({
-      name: 'vendor',
-      minChunks: module => /node_modules/.test(module.resource),
-    }),
-
-    ...(isDebug
-      ? []
-      : [
-        // Decrease script evaluation time
-        // https://github.com/webpack/webpack/blob/master/examples/scope-hoisting/README.md
-        new webpack.optimize.ModuleConcatenationPlugin(),
-
-        // Minimize all JavaScript output of chunks
-        // https://github.com/mishoo/UglifyJS2#compressor-options
-        new webpack.optimize.UglifyJsPlugin({
-          compress: {
-            warnings: isVerbose,
-            unused: true,
-            dead_code: true,
-            screw_ie8: true,
-          },
-          mangle: {
-            screw_ie8: true,
-          },
-          output: {
-            comments: false,
-            screw_ie8: true,
-          },
-          sourceMap: true,
-        }),
-      ]),
-
-    // Webpack Bundle Analyzer
-    // https://github.com/th0r/webpack-bundle-analyzer
-    ...(isAnalyze ? [new BundleAnalyzerPlugin()] : []),
   ],
 
   // Some libraries import Node modules but don't use them in the browser.
@@ -231,49 +190,6 @@ const serverConfig = {
 
   module: {
     ...config.module,
-
-    rules: overrideRules(config.module.rules, (rule) => {
-      // Override babel-preset-env configuration for Node.js
-      if (rule.loader === 'babel-loader') {
-        return {
-          ...rule,
-          options: {
-            ...rule.options,
-            presets: rule.options.presets.map(preset =>
-              (preset[0] !== '@babel/preset-env'
-                ? preset
-                : [
-                  '@babel/preset-env',
-                  {
-                    targets: {
-                      node: pkg.engines.node.match(/(\d+\.?)+/)[0],
-                    },
-                    modules: false,
-                    useBuiltIns: false,
-                    debug: false,
-                  },
-                ])),
-          },
-        };
-      }
-
-      // Override paths to static assets
-      if (
-        rule.loader === 'file-loader' ||
-        rule.loader === 'url-loader' ||
-        rule.loader === 'svg-url-loader'
-      ) {
-        return {
-          ...rule,
-          options: {
-            ...rule.options,
-            emitFile: false,
-          },
-        };
-      }
-
-      return rule;
-    }),
   },
 
   externals: [
@@ -288,14 +204,6 @@ const serverConfig = {
       'process.env.NODE_ENV': isDebug ? '"development"' : '"production"',
       'process.env.BROWSER': false,
       __DEV__: isDebug,
-    }),
-
-    // Adds a banner to the top of each generated chunk
-    // https://webpack.js.org/plugins/banner-plugin/
-    new webpack.BannerPlugin({
-      banner: 'require("source-map-support").install();',
-      raw: true,
-      entryOnly: false,
     }),
   ],
 
