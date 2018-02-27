@@ -1,17 +1,11 @@
-/**
- * React Starter Kit (https://www.reactstarterkit.com/)
- *
- * Copyright © 2014-present Kriasoft, LLC. All rights reserved.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
 import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './components/App';
+import { hydrate } from 'react-dom';
+import { EventReplayer } from 'preboot';
 
-ReactDOM.render(
-  <App />,
-  document.getElementById('app'),
-);
+import App from './App';
+
+hydrate(<App />, document.getElementById('app'));
+
+// Play back events that have been captured by preboot
+const replayer = new EventReplayer();
+replayer.replayAll();
