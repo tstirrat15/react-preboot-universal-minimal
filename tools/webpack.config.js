@@ -248,14 +248,14 @@ const config = {
       ...(isDebug
         ? []
         : [
-            {
-              test: path.resolve(
-                __dirname,
-                '../node_modules/react-deep-force-update/lib/index.js',
-              ),
-              loader: 'null-loader',
-            },
-          ]),
+          {
+            test: path.resolve(
+              __dirname,
+              '../node_modules/react-deep-force-update/lib/index.js',
+            ),
+            loader: 'null-loader',
+          },
+        ]),
     ],
   },
 
@@ -325,29 +325,29 @@ const clientConfig = {
     ...(isDebug
       ? []
       : [
-          // Decrease script evaluation time
-          // https://github.com/webpack/webpack/blob/master/examples/scope-hoisting/README.md
-          new webpack.optimize.ModuleConcatenationPlugin(),
+        // Decrease script evaluation time
+        // https://github.com/webpack/webpack/blob/master/examples/scope-hoisting/README.md
+        new webpack.optimize.ModuleConcatenationPlugin(),
 
-          // Minimize all JavaScript output of chunks
-          // https://github.com/mishoo/UglifyJS2#compressor-options
-          new webpack.optimize.UglifyJsPlugin({
-            compress: {
-              warnings: isVerbose,
-              unused: true,
-              dead_code: true,
-              screw_ie8: true,
-            },
-            mangle: {
-              screw_ie8: true,
-            },
-            output: {
-              comments: false,
-              screw_ie8: true,
-            },
-            sourceMap: true,
-          }),
-        ]),
+        // Minimize all JavaScript output of chunks
+        // https://github.com/mishoo/UglifyJS2#compressor-options
+        new webpack.optimize.UglifyJsPlugin({
+          compress: {
+            warnings: isVerbose,
+            unused: true,
+            dead_code: true,
+            screw_ie8: true,
+          },
+          mangle: {
+            screw_ie8: true,
+          },
+          output: {
+            comments: false,
+            screw_ie8: true,
+          },
+          sourceMap: true,
+        }),
+      ]),
 
     // Webpack Bundle Analyzer
     // https://github.com/th0r/webpack-bundle-analyzer
@@ -396,29 +396,27 @@ const serverConfig = {
   module: {
     ...config.module,
 
-    rules: overrideRules(config.module.rules, rule => {
+    rules: overrideRules(config.module.rules, (rule) => {
       // Override babel-preset-env configuration for Node.js
       if (rule.loader === 'babel-loader') {
         return {
           ...rule,
           options: {
             ...rule.options,
-            presets: rule.options.presets.map(
-              preset =>
-                preset[0] !== '@babel/preset-env'
-                  ? preset
-                  : [
-                      '@babel/preset-env',
-                      {
-                        targets: {
-                          node: pkg.engines.node.match(/(\d+\.?)+/)[0],
-                        },
-                        modules: false,
-                        useBuiltIns: false,
-                        debug: false,
-                      },
-                    ],
-            ),
+            presets: rule.options.presets.map(preset =>
+              (preset[0] !== '@babel/preset-env'
+                ? preset
+                : [
+                  '@babel/preset-env',
+                  {
+                    targets: {
+                      node: pkg.engines.node.match(/(\d+\.?)+/)[0],
+                    },
+                    modules: false,
+                    useBuiltIns: false,
+                    debug: false,
+                  },
+                ])),
           },
         };
       }

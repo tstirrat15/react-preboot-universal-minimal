@@ -18,13 +18,12 @@ import {
   stopReportingRuntimeErrors,
 } from 'react-error-overlay';
 
-setEditorHandler(errorLocation => {
+setEditorHandler((errorLocation) => {
   const fileName = encodeURIComponent(errorLocation.fileName);
   const lineNumber = encodeURIComponent(errorLocation.lineNumber || 1);
   fetch(
     // Keep in sync with react-dev-utils/errorOverlayMiddleware
-    `${launchEditorEndpoint}?fileName=${fileName}&lineNumber=${lineNumber}`,
-  );
+    `${launchEditorEndpoint}?fileName=${fileName}&lineNumber=${lineNumber}`);
 });
 
 hotClient.useCustomOverlay({
