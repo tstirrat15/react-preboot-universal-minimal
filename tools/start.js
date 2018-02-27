@@ -1,6 +1,8 @@
 import webpack from 'webpack';
 import express from 'express';
 import webpackDevMiddleware from 'webpack-dev-middleware';
+import webpackHotMiddleware from 'webpack-hot-middleware';
+import webpackHotServerMiddleware from 'webpack-hot-server-middleware';
 
 import config from './webpack.config';
 import run from './run';
@@ -24,6 +26,7 @@ const done = () =>
 async function start() {
   await run(clean);
   const compiler = webpack(config);
+  const clientCompiler = compiler.compilers[0];
   const options = {
     publicPath,
     stats: { colors: true },
@@ -32,6 +35,8 @@ async function start() {
   // Don't try and serve favicons
   app.use('/favicon.ico', (req, res) => res.sendStatus(204));
   app.use(webpackDevMiddleware(compiler, options));
+  app.use(webpackHotMiddleware(clientCompiler));
+  app.use(webpackHotServerMiddleware(compiler));
 
   compiler.plugin('done', done);
 }
