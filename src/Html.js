@@ -40,7 +40,7 @@ const Html = ({ scriptTags, children }) => (
 );
 
 Html.propTypes = {
-  scriptTags: PropTypes.arrayOf(PropTypes.string).isRequired,
+  scriptTags: PropTypes.arrayOf(PropTypes.node).isRequired,
   children: PropTypes.string.isRequired,
 };
 
