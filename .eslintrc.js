@@ -14,14 +14,7 @@ module.exports = {
 
   extends: [
     'airbnb',
-    'plugin:flowtype/recommended',
-    'plugin:css-modules/recommended',
-    'prettier',
-    'prettier/flowtype',
-    'prettier/react',
   ],
-
-  plugins: ['flowtype', 'css-modules', 'prettier'],
 
   globals: {
     __DEV__: true,
@@ -83,10 +76,6 @@ module.exports = {
     // Functional and class components are equivalent from React’s point of view
     // https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/prefer-stateless-function.md
     'react/prefer-stateless-function': 'off',
-
-    // ESLint plugin for prettier formatting
-    // https://github.com/prettier/eslint-plugin-prettier
-    'prettier/prettier': 'error',
   },
 
   settings: {
