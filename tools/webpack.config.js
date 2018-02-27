@@ -1,214 +1,208 @@
-/**
- * React Starter Kit (https://www.reactstarterkit.com/)
- *
- * Copyright © 2014-present Kriasoft, LLC. All rights reserved.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
+const fs = require('fs');
+const path = require('path');
+const webpack = require('webpack');
+const extend = require('extend');
+const StatsPlugin = require('stats-webpack-plugin');
 
-import path from 'path';
-import webpack from 'webpack';
-import AssetsPlugin from 'assets-webpack-plugin';
-import nodeExternals from 'webpack-node-externals';
-import pkg from '../package.json';
+const isProduction = process.argv.includes('--production');
+const isStaging = process.argv.includes('--staging');
 
-const isDebug = !process.argv.includes('--release');
+// Look for the sources of any deprecation warnings
+// in loaders
+process.traceDeprecation = true;
+
+const isDebug = !(isProduction || isStaging);
 const isVerbose = process.argv.includes('--verbose');
-
-const reScript = /\.(js|jsx|mjs)$/;
 
 //
 // Common configuration chunk to be used for both
 // client-side (client.js) and server-side (server.js) bundles
 // -----------------------------------------------------------------------------
 
+const babelLoader = targets => ({
+  // JS files are run through the babel loader, which takes care of the
+  // javascript transpilation process. The configuration is in the root
+  // .babelrc file.
+  test: /\.js/,
+  loader: 'babel-loader',
+  options: {
+    // If we're on local, we want to put the cached files in a location
+    // that stays in the container (i.e. in the build folder).
+    // If we're actually building the project, such as on circleCI,
+    // we don't want those cached files to end up in the build zip
+    // that's sent off to the server.
+    cacheDirectory: isDebug ? 'build/.cache' : true,
+    presets: [
+      ['env',
+        {
+          modules: false,
+          targets,
+        },
+      ],
+      'stage-0',
+      'react',
+    ],
+  },
+  include: [
+    path.resolve(__dirname, '../src'),
+  ],
+});
 const config = {
-  context: path.resolve(__dirname, '..'),
+  // Capture build statistics.
+  profile: true,
+
+  // The path relative to which all other paths in the webpack build
+  // are referenced. Entrypoints resolve relative to this, for example.
+  context: path.resolve(__dirname, '../src'),
 
   output: {
     path: path.resolve(__dirname, '../build/public/assets'),
     publicPath: '/assets/',
-    pathinfo: isVerbose,
-    filename: isDebug ? '[name].js' : '[name].[chunkhash:8].js',
-    chunkFilename: isDebug
-      ? '[name].chunk.js'
-      : '[name].[chunkhash:8].chunk.js',
-    // Point sourcemap entries to original disk location (format as URL on Windows)
-    devtoolModuleFilenameTemplate: info =>
-      path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
   },
 
   resolve: {
-    // Allow absolute paths in imports, e.g. import Button from 'components/Button'
-    // Keep in sync with .flowconfig and .eslintrc
-    modules: ['node_modules', 'src'],
+    // This means that if an absolute import is called (e.g. import React from 'react')
+    // it knows to look in node_modules for react.
+    modules: ['node_modules'],
+    extensions: ['.webpack.js', '.web.js', '.js', '.jsx', '.json'],
   },
-
-  module: {
-    // Make missing exports an error instead of warning
-    strictExportPresence: true,
-
-    rules: [
-      // Rules for JS / JSX
-      {
-        test: reScript,
-        include: [
-          path.resolve(__dirname, '../src'),
-          path.resolve(__dirname, '../tools'),
-        ],
-        loader: 'babel-loader',
-        options: {
-          // https://github.com/babel/babel-loader#options
-          cacheDirectory: isDebug,
-
-          // https://babeljs.io/docs/usage/options/
-          babelrc: false,
-          presets: [
-            // A Babel preset that can automatically determine the Babel plugins and polyfills
-            // https://github.com/babel/babel-preset-env
-            [
-              '@babel/preset-env',
-              {
-                targets: {
-                  browsers: pkg.browserslist,
-                  forceAllTransforms: !isDebug, // for UglifyJS
-                },
-                modules: false,
-                useBuiltIns: false,
-                debug: false,
-              },
-            ],
-            // Experimental ECMAScript proposals
-            // https://babeljs.io/docs/plugins/#presets-stage-x-experimental-presets-
-            '@babel/preset-stage-2',
-            // JSX
-            // https://github.com/babel/babel/tree/master/packages/babel-preset-react
-            ['@babel/preset-react', { development: isDebug }],
-          ],
-        },
-      },
-    ],
-  },
-
-  // Don't attempt to continue if there are any errors.
-  bail: !isDebug,
 
   cache: isDebug,
 
-  // Specify what bundle information gets displayed
-  // https://webpack.js.org/configuration/stats/
   stats: {
-    cached: isVerbose,
-    cachedAssets: isVerbose,
+    colors: true,
+    reasons: isDebug,
+    hash: isVerbose,
+    version: isVerbose,
+    timings: true,
     chunks: isVerbose,
     chunkModules: isVerbose,
-    colors: true,
-    hash: isVerbose,
-    modules: isVerbose,
-    reasons: isDebug,
-    timings: true,
-    version: isVerbose,
+    cached: isVerbose,
+    cachedAssets: isVerbose,
   },
 
-  // Choose a developer tool to enhance debugging
-  // https://webpack.js.org/configuration/devtool/#devtool
-  devtool: isDebug ? 'cheap-module-inline-source-map' : 'source-map',
+  // Create a source map for the output files. We do this for both server and client.
+  devtool: isDebug ? 'cheap-module-source-map' : 'source-map',
 };
 
 //
 // Configuration for the client-side bundle (client.js)
 // -----------------------------------------------------------------------------
-
-const clientConfig = {
-  ...config,
-
+const clientConfig = extend(true, {}, config, {
   name: 'client',
+  entry: {
+    main: [
+      'babel-polyfill',
+      './client.js',
+    ],
+  },
+
+  module: {
+    // This a list of loaders, which tells Webpack what to do with each of the
+    // files that it finds.
+    rules: [
+      babelLoader({ browsers: 'last 2 versions' }),
+    ],
+  },
+
+
+  // If the target is the production build, we want to add cache strings
+  // to the end of it, so that the client knows to download new code
+  // as it becomes available.
+  output: {
+    filename: isDebug ? '[name].js' : '[name].[chunkhash].js',
+    chunkFilename: isDebug ? '[name].js' : '[name].[chunkhash].js',
+  },
+
+  // This refers to compilation target. Webpack will use javascript that
+  // is available to web browsers (as opposed to node, which would be a
+  // different target, for example).
   target: 'web',
 
-  entry: {
-    client: ['@babel/polyfill', './src/client.js'],
-  },
-
   plugins: [
+
     // Define free variables
-    // https://webpack.js.org/plugins/define-plugin/
+    // https://webpack.github.io/docs/list-of-plugins.html#defineplugin
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': isDebug ? '"development"' : '"production"',
       'process.env.BROWSER': true,
-      __DEV__: isDebug,
     }),
 
-    // Emit a file with assets paths
-    // https://github.com/sporto/assets-webpack-plugin#options
-    new AssetsPlugin({
-      path: path.resolve(__dirname, '../build'),
-      filename: 'assets.json',
-      prettyPrint: true,
-    }),
+    // Get build statistics
+    // That path is relative to the assets output.
+    // This puts it outside of the public folder.
+    new StatsPlugin('../../stats.json'),
 
+    // This splits off a minimal webpack bootstrapper bundle, which goes
+    // before all application code. This sets up webpack-related functions
+    // for use by other bundles.
+    new webpack.optimize.CommonsChunkPlugin({
+      names: ['bootstrap'],
+      filename: isDebug ? '[name].js' : '[name].[chunkhash].js',
+      minChunks: Infinity,
+    }),
   ],
-
-  // Some libraries import Node modules but don't use them in the browser.
-  // Tell Webpack to provide empty mocks for them so importing them works.
-  // https://webpack.js.org/configuration/node/
-  // https://github.com/webpack/node-libs-browser/tree/master/mock
-  node: {
-    fs: 'empty',
-    net: 'empty',
-    tls: 'empty',
-  },
-};
+});
 
 //
 // Configuration for the server-side bundle (server.js)
 // -----------------------------------------------------------------------------
 
-const serverConfig = {
-  ...config,
-
+// TODO: we're going to need a config for build and a config for running.
+const res = p => path.resolve(__dirname, p);
+const nodeModules = res('../node_modules');
+// This pulls in all of the node_modules stuff except for react-universal-component
+// and webpack-flush-chunks, except for a few things, namely isomorphic styles
+// packages and constants.
+const nodeExternals = fs
+  .readdirSync(nodeModules)
+  .filter(x => !/\.bin|react-universal-component|webpack-flush-chunks/.test(x))
+  .reduce((externalObject, nodeModule) => ({
+    ...externalObject,
+    [nodeModule]: `commonjs ${nodeModule}`,
+  }), {});
+const externals = [
+  nodeExternals,
+  // stats is supplied by the build process, so it won't be present
+  // for the build process. It's marked as external so that webpack
+  // doesn't try and import it during build.
+  /.*stats.json/,
+];
+const serverConfig = extend(true, {}, config, {
   name: 'server',
-  target: 'node',
+  entry: isDebug ? ['./render.js'] : ['babel-polyfill', './server.js'],
 
-  entry: {
-    server: ['@babel/polyfill', './src/server.js'],
-  },
-
+  // This tells the compiler to spit out the server bundle two directories
+  // down from where the client code is output. Since we're sticking the
+  // client code in build/public/assets, this sticks the server code at build.
   output: {
-    ...config.output,
-    path: path.resolve(__dirname, '../build'),
-    filename: '[name].js',
-    chunkFilename: 'chunks/[name].js',
+    filename: '../../server.js',
     libraryTarget: 'commonjs2',
   },
 
-  // Webpack mutates resolve object, so clone it to avoid issues
-  // https://github.com/webpack/webpack/issues/4817
-  resolve: {
-    ...config.resolve,
-  },
-
+  target: 'node',
   module: {
-    ...config.module,
+    // This a list of loaders, which tells Webpack what to do with each of the
+    // files that it finds.
+    rules: [
+      babelLoader({ node: '8.1.4' }),
+    ],
   },
 
-  externals: [
-    './assets.json',
-    nodeExternals({}),
-  ],
+  externals,
 
   plugins: [
     // Define free variables
-    // https://webpack.js.org/plugins/define-plugin/
+    // https://webpack.github.io/docs/list-of-plugins.html#defineplugin
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': isDebug ? '"development"' : '"production"',
       'process.env.BROWSER': false,
-      __DEV__: isDebug,
     }),
+
+    // Do not create separate chunks of the server bundle. We want all
+    // of the server code to be in one bundle for faster execution.
+    new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
   ],
 
-  // Do not replace node globals with polyfills
-  // https://webpack.js.org/configuration/node/
+  // These are needed for node compilation to work properly.
   node: {
     console: false,
     global: false,
@@ -217,6 +211,6 @@ const serverConfig = {
     __filename: false,
     __dirname: false,
   },
-};
+});
 
-export default [clientConfig, serverConfig];
+module.exports = [clientConfig, serverConfig];
