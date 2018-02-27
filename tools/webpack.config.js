@@ -9,6 +9,8 @@
 
 import path from 'path';
 import webpack from 'webpack';
+import AssetsPlugin from 'assets-webpack-plugin';
+import nodeExternals from 'webpack-node-externals';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import overrideRules from './lib/overrideRules';
 import pkg from '../package.json';
@@ -141,6 +143,14 @@ const clientConfig = {
       __DEV__: isDebug,
     }),
 
+    // Emit a file with assets paths
+    // https://github.com/sporto/assets-webpack-plugin#options
+    new AssetsPlugin({
+      path: path.resolve(__dirname, '../build'),
+      filename: 'assets.json',
+      prettyPrint: true,
+    }),
+
     // Move modules that occur in multiple entry chunks to a new entry chunk (the commons chunk).
     // https://webpack.js.org/plugins/commons-chunk-plugin/
     new webpack.optimize.CommonsChunkPlugin({
@@ -265,6 +275,11 @@ const serverConfig = {
       return rule;
     }),
   },
+
+  externals: [
+    './assets.json',
+    nodeExternals({}),
+  ],
 
   plugins: [
     // Define free variables
