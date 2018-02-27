@@ -12,7 +12,6 @@ import express from 'express';
 import browserSync from 'browser-sync';
 import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
-import webpackHotMiddleware from 'webpack-hot-middleware';
 import errorOverlayMiddleware from 'react-dev-utils/errorOverlayMiddleware';
 import webpackConfig from './webpack.config';
 import run, { format } from './run';
@@ -118,9 +117,6 @@ async function start() {
     watchOptions,
   }));
 
-  // https://github.com/glenjamin/webpack-hot-middleware
-  server.use(webpackHotMiddleware(clientCompiler, { log: false }));
-
   let appPromise;
   let appPromiseResolve;
   let appPromiseIsResolved = true;
@@ -136,54 +132,6 @@ async function start() {
     appPromise
       .then(() => app.handle(req, res))
       .catch(error => console.error(error));
-  });
-
-  function checkForUpdate(fromUpdate) {
-    const hmrPrefix = '[\x1b[35mHMR\x1b[0m] ';
-    if (!app.hot) {
-      throw new Error(`${hmrPrefix}Hot Module Replacement is disabled.`);
-    }
-    if (app.hot.status() !== 'idle') {
-      return Promise.resolve();
-    }
-    return app.hot
-      .check(true)
-      .then((updatedModules) => {
-        if (!updatedModules) {
-          if (fromUpdate) {
-            console.info(`${hmrPrefix}Update applied.`);
-          }
-          return;
-        }
-        if (updatedModules.length === 0) {
-          console.info(`${hmrPrefix}Nothing hot updated.`);
-        } else {
-          console.info(`${hmrPrefix}Updated modules:`);
-          updatedModules.forEach(moduleId =>
-            console.info(`${hmrPrefix} - ${moduleId}`));
-          checkForUpdate(true);
-        }
-      })
-      .catch((error) => {
-        if (['abort', 'fail'].includes(app.hot.status())) {
-          console.warn(`${hmrPrefix}Cannot apply update.`);
-          delete require.cache[require.resolve('../build/server')];
-          // eslint-disable-next-line global-require, import/no-unresolved
-          app = require('../build/server').default;
-          console.warn(`${hmrPrefix}App has been reloaded.`);
-        } else {
-          console.warn(`${hmrPrefix}Update failed: ${error.stack || error.message}`);
-        }
-      });
-  }
-
-  serverCompiler.watch(watchOptions, (error, stats) => {
-    if (app && !error && !stats.hasErrors()) {
-      checkForUpdate().then(() => {
-        appPromiseIsResolved = true;
-        appPromiseResolve();
-      });
-    }
   });
 
   // Wait until both client-side and server-side bundles are ready
